@@ -86,9 +86,11 @@ simple!
   corrected for the ESP32's little endian memory layout
 * `adafruit_144_tft_paint(...)` "prints" a rectangular pixel
   buffer to the panel
+* `adafruit_144_tft_pixel(...)` "prints" a single pixel to
+  the panel
 
 See detailed durocumentation in
-[adafruit-144-tft.h](./include/adafruit-144-tft.h))
+[adafruit-144-tft.h](./include/adafruit-144-tft.h)
 
 ## Technical Notes
 
