@@ -204,7 +204,7 @@ void adafruit_144_tft_init(st7735r_device_handle_t device)
     ESP_ERROR_CHECK(ret);
     ret = st7735r_dispon(device);
     ESP_ERROR_CHECK(ret);
-    st7735r_backlight(device, device->gpio_bckl);
+    st7735r_backlight(device, ST7735R_CFG_BCKL_ON);
 }
 
 
