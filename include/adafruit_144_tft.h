@@ -60,6 +60,11 @@
 #define ADAFRUIT_144_TFT_HEIGHT 128
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /**
  * @brief Initialize the display
  *
@@ -195,5 +200,9 @@ esp_err_t adafruit_144_tft_pixel(
     uint8_t y
 );
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // ADAFRUIT_144_TFT_H
