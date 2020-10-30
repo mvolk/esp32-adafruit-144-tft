@@ -40,14 +40,14 @@ This library aims to support the following... and only the following:
 
 This library depends on the following components:
 * [esp32-tft](https://github.com/mvolk/esp32-tft)
-* [esp32-st7335r](https://github.com/mvolk/esp32-st7735r)
+* [esp32-st7735r](https://github.com/mvolk/esp32-st7735r)
 
 Installation of these components is your responsibility.
 
 ## Boundaries
 
 * **SPI Bus:** this library relies on the
-  [esp32-st7335r](https://github.com/mvolk/esp32-st7735r)
+  [esp32-st7735r](https://github.com/mvolk/esp32-st7735r)
   library to interface with the driver IC over SPI. This
   library does not itself directly exercise any SPI bus
   features.
@@ -87,7 +87,7 @@ git commit -m "Add esp32_adafruit_144_tft component and dependencies"
 
 There's not much to this high-level library. The
 heavy lifting has been delegated to the
-[esp32-st7335r](https://github.com/mvolk/esp32-st7735r)
+[esp32-st7735r](https://github.com/mvolk/esp32-st7735r)
 library behind the scenes and to the
 [esp32-tft](https://github.com/mvolk/esp32-tft) library
 for application interfacing, leaving this "developer
@@ -114,7 +114,7 @@ API provided by [esp32-tft](https://github.com/mvolk/esp32-tft).
   the ribbon cable opposite the header pins.
 
 * This library is a thin wrapper around the
-  [esp32-st7335r](https://github.com/mvolk/esp32-st7735r)
+  [esp32-st7735r](https://github.com/mvolk/esp32-st7735r)
   library. There are a number of important technical
   notes in that library's README that are well worth
   reading.
