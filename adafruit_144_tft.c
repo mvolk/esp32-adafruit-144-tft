@@ -52,7 +52,9 @@
 #include <esp_system.h>
 #include <esp_log.h>
 
-
+#define ADAFRUIT_144_TFT_BITDEPTH 16
+#define ADAFRUIT_144_TFT_WIDTH 128
+#define ADAFRUIT_144_TFT_HEIGHT 128
 #define ADAFRUIT_144_TFT_OFFSET_X 3
 #define ADAFRUIT_144_TFT_OFFSET_Y 2
 
@@ -60,11 +62,72 @@
 static const char * ADAFRUIT_144_TFT_TAG = "adafruit_144_tft";
 
 
-void adafruit_144_tft_init(st7735r_device_handle_t device)
+static esp_err_t render(
+    tft_info_t *tft_info,
+    uint16_t * buffer,
+    uint8_t x0,
+    uint8_t y0,
+    uint8_t x1,
+    uint8_t y1)
+{
+    return st7735r_paint(
+        (st7735r_device_handle_t) tft_info->device,
+        (void *) buffer,
+        x0 + ADAFRUIT_144_TFT_OFFSET_X,
+        x1 + ADAFRUIT_144_TFT_OFFSET_X,
+        y0 + ADAFRUIT_144_TFT_OFFSET_Y,
+        y1 + ADAFRUIT_144_TFT_OFFSET_Y
+    );
+}
+
+static esp_err_t draw_point(
+    tft_info_t *tft_info,
+    uint16_t color,
+    uint8_t x,
+    uint8_t y)
+{
+    esp_err_t ret;
+    uint8_t xo = x + ADAFRUIT_144_TFT_OFFSET_X;
+    uint8_t yo = y + ADAFRUIT_144_TFT_OFFSET_Y;
+    st7735r_device_handle_t device;
+    device = (st7735r_device_handle_t) tft_info->device;
+    ret = st7735r_caset(device, xo, xo);
+    if (ret != ESP_OK) {
+      ESP_LOGE(
+        ADAFRUIT_144_TFT_TAG,
+        "adafruit_144_tft_pixel(...) failed on st7735r_caset: %s",
+        esp_err_to_name(ret)
+      );
+    } else {
+      ret = st7735r_raset(device, yo, yo);
+      if (ret != ESP_OK) {
+        ESP_LOGE(
+          ADAFRUIT_144_TFT_TAG,
+          "adafruit_144_tft_pixel(...) failed on st7735r_raset: %s",
+          esp_err_to_name(ret)
+        );
+      } else {
+        ret = st7735r_ramwr(device, &color, 1);
+        if (ret != ESP_OK) {
+          ESP_LOGE(
+            ADAFRUIT_144_TFT_TAG,
+            "adafruit_144_tft_pixel(...) failed on st7735r_ramwr: %s",
+            esp_err_to_name(ret)
+          );
+        }
+      }
+    }
+
+    return ret;
+}
+
+
+static void common_init(
+    tft_handle_t tft,
+    st7735r_device_handle_t device)
 {
     esp_err_t ret;
     st7735r_backlight(device, ST7735R_CFG_BCKL_OFF);
-    st7735r_init(device, NULL);
     st7735r_hwreset(device);
     ret = st7735r_swreset(device);
     ESP_ERROR_CHECK(ret);
@@ -172,18 +235,6 @@ void adafruit_144_tft_init(st7735r_device_handle_t device)
     ESP_ERROR_CHECK(ret);
     ret = st7735r_colmod(device, ST7735R_CFG_16_BIT_COLOR);
     ESP_ERROR_CHECK(ret);
-    ret = st7735r_caset(
-        device,
-        ADAFRUIT_144_TFT_OFFSET_X,
-        127 + ADAFRUIT_144_TFT_OFFSET_X
-    );
-    ESP_ERROR_CHECK(ret);
-    ret = st7735r_raset(
-        device,
-        ADAFRUIT_144_TFT_OFFSET_Y,
-        127 + ADAFRUIT_144_TFT_OFFSET_Y
-    );
-    ESP_ERROR_CHECK(ret);
     uint8_t pos_polarity[16] = {
       0x02, 0x1C, 0x07, 0x12,
       0x37, 0x32, 0x29, 0x2D,
@@ -205,106 +256,41 @@ void adafruit_144_tft_init(st7735r_device_handle_t device)
     ret = st7735r_dispon(device);
     ESP_ERROR_CHECK(ret);
     st7735r_backlight(device, ST7735R_CFG_BCKL_ON);
+
+    // Populate the TFT descriptor
+    tft->info.bitdepth = ADAFRUIT_144_TFT_BITDEPTH;
+    tft->info.width = ADAFRUIT_144_TFT_WIDTH;
+    tft->info.height = ADAFRUIT_144_TFT_HEIGHT;
+    tft->info.orientation = TFT_UPRIGHT;
+    tft->info.device = device;
+    tft->set_orientation = NULL;
+    tft->render16 = &render;
+    tft->draw16_point = &draw_point;
 }
 
 
-uint16_t adafruit_144_tft_rgb565(
-    uint8_t red,
-    uint8_t green,
-    uint8_t blue)
-{
-  return st7735r_rgb565(red, green, blue);
-}
-
-
-esp_err_t adafruit_144_tft_paint(
-    st7735r_device_handle_t device,
-    uint16_t * buffer,
-    uint8_t x0,
-    uint8_t y0,
-    uint8_t x1,
-    uint8_t y1)
-{
-    if (x0 > x1) {
-      ESP_LOGE(
-        ADAFRUIT_144_TFT_TAG,
-        "adafruit_144_tft_paint(...) requires x0 <= x1"
-      );
-      return ESP_ERR_INVALID_ARG;
-    }
-    if (x0 > 127 || x1 > 127) {
-      ESP_LOGE(
-        ADAFRUIT_144_TFT_TAG,
-        "adafruit_144_tft_paint(...) requires x0 and x1 < 128"
-      );
-      return ESP_ERR_INVALID_ARG;
-    }
-    if (y0 > y1) {
-      ESP_LOGE(
-        ADAFRUIT_144_TFT_TAG,
-        "adafruit_144_tft_paint(...) requires y0 <= y1"
-      );
-
-    }
-    if (y0 > 127 || y1 > 127) {
-      ESP_LOGE(
-        ADAFRUIT_144_TFT_TAG,
-        "adafruit_144_tft_paint(...) requires y0 and y1 < 128"
-      );
-      return ESP_ERR_INVALID_ARG;
-    }
-    return st7735r_paint(
-        device,
-        (void *) buffer,
-        x0 + ADAFRUIT_144_TFT_OFFSET_X,
-        x1 + ADAFRUIT_144_TFT_OFFSET_X,
-        y0 + ADAFRUIT_144_TFT_OFFSET_Y,
-        y1 + ADAFRUIT_144_TFT_OFFSET_Y
-    );
-}
-
-esp_err_t adafruit_144_tft_pixel(
-    st7735r_device_handle_t device,
-    uint16_t * buffer,
-    uint8_t x,
-    uint8_t y)
-{
-    if (x > 127 || y > 127) {
-      ESP_LOGE(
-        ADAFRUIT_144_TFT_TAG,
-        "adafruit_144_tft_pixel(...) requires x < 128 and y < 128"
-      );
-      return ESP_ERR_INVALID_ARG;
-    }
-    esp_err_t ret;
-    uint8_t xo = x + ADAFRUIT_144_TFT_OFFSET_X;
-    uint8_t yo = y + ADAFRUIT_144_TFT_OFFSET_Y;
-    ret = st7735r_caset(device, xo, xo);
-    if (ret != ESP_OK) {
-      ESP_LOGE(
-        ADAFRUIT_144_TFT_TAG,
-        "adafruit_144_tft_pixel(...) failed on st7735r_caset: %s",
-        esp_err_to_name(ret)
-      );
-    } else {
-      ret = st7735r_raset(device, yo, yo);
-      if (ret != ESP_OK) {
+tft_handle_t adafruit_144_tft_init(
+  const st7735r_params_t *params
+) {
+    st7735r_device_handle_t device = st7735r_init(params);
+    tft_handle_t tft = (tft_handle_t) malloc(sizeof(tft_t));
+    if (!tft) {
         ESP_LOGE(
-          ADAFRUIT_144_TFT_TAG,
-          "adafruit_144_tft_pixel(...) failed on st7735r_raset: %s",
-          esp_err_to_name(ret)
-        );
-      } else {
-        ret = st7735r_ramwr(device, buffer, 1);
-        if (ret != ESP_OK) {
-          ESP_LOGE(
             ADAFRUIT_144_TFT_TAG,
-            "adafruit_144_tft_pixel(...) failed on st7735r_ramwr: %s",
-            esp_err_to_name(ret)
-          );
-        }
-      }
+            "Failed to allocate memory for tft descriptor"
+        );
+        esp_restart();
     }
+    common_init(tft, device);
+    return tft;
+}
 
-    return ret;
+
+void adafruit_144_tft_init_static(
+  const st7735r_params_t *params,
+  tft_handle_t tft,
+  st7735r_device_handle_t device)
+{
+    st7735r_init_static(params, device);
+    common_init(tft, device);
 }

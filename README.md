@@ -38,9 +38,11 @@ This library aims to support the following... and only the following:
 
 ## Dependencies
 
-This library depends on the
-[esp32-st7335r](https://github.com/mvolk/esp32-st7735r)
-library.
+This library depends on the following components:
+* [esp32-tft](https://github.com/mvolk/esp32-tft)
+* [esp32-st7335r](https://github.com/mvolk/esp32-st7735r)
+
+Installation of these components is your responsibility.
 
 ## Boundaries
 
@@ -58,6 +60,10 @@ library.
   board, but its use is expected to be compatible with use
   of the SD card reader on the same SPI bus via a different
   library or user code.
+* **API:** This library provides an API for initializing the
+  panel and `tft_t` struct. All other APIs for interacting
+  with the display are provided by the
+  [esp32-tft](https://github.com/mvolk/esp32-tft) library.
 
 ## Installation
 
@@ -69,7 +75,11 @@ folder as a Git submodule:
 ```shell
 cd ${YOUR_PROJECT_ROOT}/components
 git submodule add https://github.com/mvolk/esp32-adafruit-144-tft.git
-git commit -m "Add esp32_adafruit_144_tft component"
+# If esp32-tft is not already installed:
+git submodule add https://github.com/mvolk/esp32-tft.git
+# If esp32-st7735r is not already installed:
+git submodule add https://github.com/mvolk/esp32-st7735r.git
+git commit -m "Add esp32_adafruit_144_tft component and dependencies"
 
 ```
 
@@ -78,26 +88,30 @@ git commit -m "Add esp32_adafruit_144_tft component"
 There's not much to this high-level library. The
 heavy lifting has been delegated to the
 [esp32-st7335r](https://github.com/mvolk/esp32-st7735r)
-library, leaving this "developer interface" quite
-simple!
+library behind the scenes and to the
+[esp32-tft](https://github.com/mvolk/esp32-tft) library
+for application interfacing, leaving this "developer
+interface" quite lean.
 
-* `adafruit_144_tft_init(...)` initializes the panel
-* `adafruit_144_tft_rgb565(...)` creates RGB/565 color codes
-  corrected for the ESP32's little endian memory layout
-* `adafruit_144_tft_paint(...)` "prints" a rectangular pixel
-  buffer to the panel
-* `adafruit_144_tft_pixel(...)` "prints" a single pixel to
-  the panel
+* `adafruit_144_tft_init(...)` initializes the panel using
+  memory it allocates from the heap
+* `adafruit_144_tft_init_static(...)` initializes the panel
+  using memory provided by the caller
 
 See detailed durocumentation in
 [adafruit-144-tft.h](./include/adafruit-144-tft.h)
 
+The initialization functions will provide you with an
+initialized `tft_handle_t` that you can supply to the drawing
+API provided by [esp32-tft](https://github.com/mvolk/esp32-tft).
+
 ## Technical Notes
 
-* This library is set up so that the origin (0, 0) is
-  at the bottom left of the screen, and so that the origin
-  closest to the "lite" pin and the x-axis extends from
-  the origin towards the ribbon cable opposite the pinouts.
+* This library's convention is that the origin (0, 0) is
+  at the bottom left of the screen. The physical location
+  of this corner in the default (upright) orientation is
+  closest to the "lite" pin with the x-axis extending towards
+  the ribbon cable opposite the header pins.
 
 * This library is a thin wrapper around the
   [esp32-st7335r](https://github.com/mvolk/esp32-st7735r)
@@ -131,7 +145,8 @@ development platforms, please consider forking this library.
 
 ## Credits
 
-This library is not quite a derivative of the [Adafruit-ST7735-Library](Adafruit-ST7735-Library)
+This library is not quite a derivative of the
+[Adafruit-ST7735-Library](https://github.com/adafruit/Adafruit-ST7735-Library)
 for the Arduino platform, but it draws so heavily on the configuration
 examples provided in that library that the Adafruit license and copyright
 are reproduced as part of this library's licensing.
